@@ -147,3 +147,6 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# TanStack Router generated files
+src/routeTree.gen.ts
