@@ -159,3 +159,137 @@ export function createRequest(state, customerId, input) {
     requestId: req.id,
   };
 }
+
+
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+export function passwordProblem(pw) {
+  if (pw.length < 8) {
+    return "Password must be at least 8 characters.";
+  }
+
+  if (!/[0-9]/.test(pw)) {
+    return "Password must include at least one number.";
+  }
+
+  if (!/[A-Za-z]/.test(pw)) {
+    return "Password must include at least one letter.";
+  }
+
+  return null;
+}
+
+
+export function validateRegistration(state, input) {
+  const errors = {};
+
+  if (!input.name.trim()) {
+    errors["name"] = "Full name is required.";
+  }
+
+  if (!input.email.trim()) {
+    errors["email"] = "Email is required.";
+  } else if (!EMAIL_RE.test(input.email.trim())) {
+    errors["email"] = "Enter a valid email address.";
+  } else if (
+    state.users.some(
+      (u) =>
+        u.email.toLowerCase() ===
+        input.email.trim().toLowerCase()
+    )
+  ) {
+    errors["email"] = "An account with this email already exists.";
+  }
+
+  if (!input.phone.trim()) {
+    errors["phone"] = "Phone number is required.";
+  } else if (!/^\+?[0-9\s-]{8,15}$/.test(input.phone.trim())) {
+    errors["phone"] = "Enter a valid phone number (8–15 digits).";
+  }
+
+  const pw = passwordProblem(input.password);
+
+  if (pw) {
+    errors["password"] = pw;
+  }
+
+  if (input.confirmPassword !== input.password) {
+    errors["confirmPassword"] = "Passwords do not match.";
+  }
+
+  if (
+    input.role === "freelancer" &&
+    input.categoryIds.length === 0
+  ) {
+    errors["categoryIds"] =
+      "Select at least one repair category.";
+  }
+
+  return errors;
+}
+
+
+export function register(state, input) {
+  const errors = validateRegistration(state, input);
+  const first = Object.entries(errors)[0];
+
+  if (first) {
+    throw new RuleError(first[1], first[0]);
+  }
+
+  const n = state.counters.user + 1;
+
+  const user = {
+    id: `U-${n}`,
+    role: input.role,
+    name: input.name.trim(),
+    email: input.email.trim().toLowerCase(),
+    phone: input.phone.trim(),
+    passwordHash: demoHash(input.password),
+    status: "Pending Activation",
+    joinedAt: now(),
+    ...(input.role === "freelancer"
+      ? {
+          categoryIds: input.categoryIds,
+          bio: "",
+          city: "",
+        }
+      : {}),
+  };
+
+  return {
+    state: {
+      ...state,
+      users: [...state.users, user],
+      counters: {
+        ...state.counters,
+        user: n,
+      },
+    },
+    userId: user.id,
+  };
+}
+
+
+export function activate(state, userId) {
+  const user = state.users.find((u) => u.id === userId);
+
+  if (!user) {
+    throw new RuleError(
+      "This activation link is invalid or has expired."
+    );
+  }
+
+  if (user.status === "Suspended") {
+    throw new RuleError("This account is suspended.");
+  }
+
+  return {
+    ...state,
+    users: state.users.map((u) =>
+      u.id === userId
+        ? { ...u, status: "Active" }
+        : u
+    ),
+  };
+}
