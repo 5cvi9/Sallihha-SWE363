@@ -293,3 +293,101 @@ export function activate(state, userId) {
     ),
   };
 }
+
+
+export function relevantRequests(state, freelancerId) {
+  const freelancer = getUser(state, freelancerId);
+  const categories = freelancer.categoryIds ?? [];
+
+  return state.requests.filter(
+    (request) =>
+      request.status === "Awaiting Offers" &&
+      !request.removed &&
+      categories.includes(request.categoryId)
+  );
+}
+
+
+export function submitOffer(state, freelancerId, requestId, price, note) {
+  const freelancer = requireRole(state, freelancerId, "freelancer");
+
+  const request = state.requests.find((r) => r.id === requestId);
+
+  if (!request || request.removed) {
+    throw new RuleError("Repair request not found.");
+  }
+
+  if (request.status !== "Awaiting Offers") {
+    throw new RuleError("This request is no longer accepting offers.");
+  }
+
+  if (!(freelancer.categoryIds ?? []).includes(request.categoryId)) {
+    throw new RuleError("This request does not match your repair categories.");
+  }
+
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new RuleError("Enter a price greater than 0.", "price");
+  }
+
+  if (price > 100000) {
+    throw new RuleError("Enter a realistic price estimate.", "price");
+  }
+
+  if (note.length > 500) {
+    throw new RuleError("Note must be 500 characters or fewer.", "note");
+  }
+
+  if (
+    state.offers.some(
+      (o) =>
+        o.requestId === requestId &&
+        o.freelancerId === freelancerId &&
+        o.status === "Pending"
+    )
+  ) {
+    throw new RuleError("You already have an active offer on this request.");
+  }
+
+  const n = state.counters.offer + 1;
+
+  const offer = {
+    id: `OF-${n}`,
+    requestId,
+    freelancerId,
+    price: Math.round(price * 100) / 100,
+    note: note.trim(),
+    createdAt: now(),
+    status: "Pending",
+  };
+
+  return {
+    ...state,
+    offers: [offer, ...state.offers],
+    counters: {
+      ...state.counters,
+      offer: n,
+    },
+  };
+}
+
+
+export function withdrawOffer(state, freelancerId, offerId) {
+  const offer = state.offers.find((o) => o.id === offerId);
+
+  if (!offer || offer.freelancerId !== freelancerId) {
+    throw new RuleError("Offer not found.");
+  }
+
+  if (offer.status !== "Pending") {
+    throw new RuleError("Only pending offers can be withdrawn.");
+  }
+
+  return {
+    ...state,
+    offers: state.offers.map((o) =>
+      o.id === offerId
+        ? { ...o, status: "Withdrawn" }
+        : o
+    ),
+  };
+}
