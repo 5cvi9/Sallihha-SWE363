@@ -1,3 +1,4 @@
+import "../styles.css";
 import { AppStoreProvider } from "@/context/AppStore";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
