@@ -391,3 +391,237 @@ export function withdrawOffer(state, freelancerId, offerId) {
     ),
   };
 }
+
+
+export const STAGES = [
+  "Diagnosis Confirmed",
+  "In Repair",
+  "Ready for Pickup",
+];
+
+export const CUSTOMER_OUTCOMES = [
+  "Returned to Customer",
+  "Donated",
+  "Reused for Parts",
+  "Recycled",
+];
+
+function assignedRepair(state, freelancerId, requestId) {
+  requireRole(state, freelancerId, "freelancer");
+
+  const request = state.requests.find((r) => r.id === requestId);
+
+  if (!request || request.assignedFreelancerId !== freelancerId) {
+    throw new RuleError("This repair is not assigned to you.");
+  }
+
+  return request;
+}
+
+export function nextStage(stage) {
+  const index = stage ? STAGES.indexOf(stage) : -1;
+  return STAGES[index + 1] ?? null;
+}
+
+export function advanceStage(
+  state,
+  freelancerId,
+  requestId,
+  target,
+  note = ""
+) {
+  const request = assignedRepair(state, freelancerId, requestId);
+
+  if (request.status !== "In Progress") {
+    throw new RuleError(
+      "Progress can only be updated on in-progress repairs."
+    );
+  }
+
+  const expected = nextStage(request.stage);
+
+  if (target !== expected) {
+    throw new RuleError(
+      expected
+        ? `Stages must follow the sequence. The next stage is "${expected}".`
+        : "This repair is already at the final stage."
+    );
+  }
+
+  return {
+    ...state,
+    requests: state.requests.map((r) =>
+      r.id === requestId
+        ? {
+            ...r,
+            stage: target,
+            history: [
+              ...r.history,
+              {
+                label: target,
+                at: now(),
+                note: note.trim() || undefined,
+              },
+            ],
+          }
+        : r
+    ),
+  };
+}
+
+export function recordOutcome(
+  state,
+  freelancerId,
+  requestId,
+  outcome
+) {
+  const request = assignedRepair(state, freelancerId, requestId);
+
+  if (request.outcome || request.status === "Closed") {
+    throw new RuleError(
+      "An outcome has already been recorded for this repair."
+    );
+  }
+
+  if (outcome !== "Completed") {
+    throw new RuleError(
+      "Unrepairable devices must be marked unrepairable so the customer decides."
+    );
+  }
+
+  if (request.status !== "In Progress") {
+    throw new RuleError("Only in-progress repairs can be closed.");
+  }
+
+  if (request.stage !== "Ready for Pickup") {
+    throw new RuleError(
+      'Move the repair to "Ready for Pickup" before marking it completed.'
+    );
+  }
+
+  const t = now();
+
+  return {
+    ...state,
+    requests: state.requests.map((r) =>
+      r.id === requestId
+        ? {
+            ...r,
+            status: "Closed",
+            outcome,
+            closedAt: t,
+            history: [
+              ...r.history,
+              { label: "Repair completed", at: t },
+            ],
+          }
+        : r
+    ),
+  };
+}
+
+export function markUnrepairable(
+  state,
+  freelancerId,
+  requestId
+) {
+  const request = assignedRepair(state, freelancerId, requestId);
+
+  if (request.outcome || request.status === "Closed") {
+    throw new RuleError(
+      "An outcome has already been recorded for this repair."
+    );
+  }
+
+  if (request.status === "Awaiting Customer Decision") {
+    throw new RuleError(
+      "This repair is already waiting for the customer's decision."
+    );
+  }
+
+  if (request.status !== "In Progress") {
+    throw new RuleError(
+      "Only in-progress repairs can be marked unrepairable."
+    );
+  }
+
+  const t = now();
+
+  return {
+    ...state,
+    requests: state.requests.map((r) =>
+      r.id === requestId
+        ? {
+            ...r,
+            status: "Awaiting Customer Decision",
+            history: [
+              ...r.history,
+              {
+                label: "Marked unrepairable — awaiting customer decision",
+                at: t,
+              },
+            ],
+          }
+        : r
+    ),
+  };
+}
+
+export function chooseOutcome(
+  state,
+  customerId,
+  requestId,
+  outcome
+) {
+  requireRole(state, customerId, "customer");
+
+  const request = state.requests.find(
+    (r) => r.id === requestId && r.customerId === customerId
+  );
+
+  if (!request) {
+    throw new RuleError("Repair request not found.");
+  }
+
+  if (request.status === "Closed" || request.outcome) {
+    throw new RuleError(
+      "A final decision has already been recorded for this repair."
+    );
+  }
+
+  if (request.status !== "Awaiting Customer Decision") {
+    throw new RuleError(
+      "This request is not waiting for a customer decision."
+    );
+  }
+
+  if (!CUSTOMER_OUTCOMES.includes(outcome)) {
+    throw new RuleError(
+      "Choose one of the available options.",
+      "outcome"
+    );
+  }
+
+  const t = now();
+
+  return {
+    ...state,
+    requests: state.requests.map((r) =>
+      r.id === requestId
+        ? {
+            ...r,
+            status: "Closed",
+            outcome,
+            closedAt: t,
+            history: [
+              ...r.history,
+              {
+                label: `Customer decision — ${outcome}`,
+                at: t,
+              },
+            ],
+          }
+        : r
+    ),
+  };
+}
