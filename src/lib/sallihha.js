@@ -664,3 +664,100 @@ export function updateProfile(state, freelancerId, input) {
     ),
   };
 }
+
+
+function audit(state, actorId, action) {
+  return [
+    {
+      id: `AU-${state.audit.length + 1}`,
+      at: now(),
+      actorId,
+      action,
+    },
+    ...state.audit,
+  ];
+}
+
+
+export function setUserStatus(state, adminId, userId, status) {
+  requireRole(state, adminId, "admin");
+  const u = getUser(state, userId);
+  if (u.role === "admin") throw new RuleError("Admin accounts cannot be changed here.");
+  if (u.status === status) throw new RuleError(`Account is already ${status.toLowerCase()}.`);
+  return {
+    ...state,
+    users: state.users.map((x) => (x.id === userId ? { ...x, status } : x)),
+    audit: audit(
+      state,
+      adminId,
+      `${status === "Suspended" ? "Suspended" : "Reactivated"} ${u.name} (${u.id})`,
+    ),
+  };
+}
+
+
+export function categoryUsage(state, id) {
+  const activeRequests = state.requests.filter(
+    (r) => r.categoryId === id && r.status !== "Closed",
+  ).length;
+  const anyRequests = state.requests.filter((r) => r.categoryId === id).length;
+  const providers = state.users.filter((u) => u.categoryIds?.includes(id)).length;
+  return { activeRequests, anyRequests, providers };
+}
+
+
+export function setCategoryActive(state, adminId, id, active) {
+  requireRole(state, adminId, "admin");
+  return {
+    ...state,
+    categories: state.categories.map((c) => (c.id === id ? { ...c, active } : c)),
+  };
+}
+
+export function removeCategory(state, adminId, id) {
+  requireRole(state, adminId, "admin");
+  const usage = categoryUsage(state, id);
+  if (usage.activeRequests > 0)
+    throw new RuleError("This category is used by active requests. Deactivate it instead.");
+  if (usage.anyRequests > 0)
+    throw new RuleError("This category appears in repair history. Deactivate it instead.");
+  return {
+    ...state,
+    categories: state.categories.filter((c) => c.id !== id),
+    users: state.users.map((u) =>
+      u.categoryIds ? { ...u, categoryIds: u.categoryIds.filter((c) => c !== id) } : u,
+    ),
+  };
+}
+
+export function renameCategory(state, adminId, id, name) {
+  requireRole(state, adminId, "admin");
+  const n = validateCategoryName(state, name, id);
+  return {
+    ...state,
+    categories: state.categories.map((c) => (c.id === id ? { ...c, name: n } : c)),
+  };
+}
+
+export function addCategory(state, adminId, name) {
+  requireRole(state, adminId, "admin");
+  const n = validateCategoryName(state, name);
+  const id =
+    "cat-" + n.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + (state.categories.length + 1);
+  return {
+    ...state,
+    categories: [...state.categories, { id, name: n, active: true }],
+    audit: audit(state, adminId, `Added category ${n}`),
+  };
+}
+
+
+function validateCategoryName(state, name, exceptId) {
+  const n = name.trim();
+  if (!n) throw new RuleError("Category name cannot be empty.", "name");
+  if (n.length > 40) throw new RuleError("Category name must be 40 characters or fewer.", "name");
+  if (state.categories.some((c) => c.id !== exceptId && c.name.toLowerCase() === n.toLowerCase()))
+    throw new RuleError("A category with this name already exists.", "name");
+  return n;
+}
+
