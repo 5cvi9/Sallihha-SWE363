@@ -150,3 +150,9 @@ vite.config.ts.timestamp-*
 
 # TanStack Router generated files
 src/routeTree.gen.ts
+
+# TanStack generated files
+.tanstack/
+
+# macOS system files
+.DS_Store
