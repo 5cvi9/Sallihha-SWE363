@@ -625,3 +625,42 @@ export function chooseOutcome(
     ),
   };
 }
+
+
+export function updateProfile(state, freelancerId, input) {
+  requireRole(state, freelancerId, "freelancer");
+
+  if (!input.name.trim())
+    throw new RuleError("Full name is required.", "name");
+
+  if (!input.phone.trim())
+    throw new RuleError("Phone number is required.", "phone");
+
+  if (input.categoryIds.length === 0)
+    throw new RuleError(
+      "At least one repair category must remain selected.",
+      "categoryIds"
+    );
+
+  if (input.bio.length > 400)
+    throw new RuleError(
+      "Bio must be 400 characters or fewer.",
+      "bio"
+    );
+
+  return {
+    ...state,
+    users: state.users.map((u) =>
+      u.id === freelancerId
+        ? {
+            ...u,
+            name: input.name.trim(),
+            phone: input.phone.trim(),
+            city: input.city.trim(),
+            bio: input.bio.trim(),
+            categoryIds: input.categoryIds,
+          }
+        : u
+    ),
+  };
+}
