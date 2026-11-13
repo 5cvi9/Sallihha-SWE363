@@ -1,11 +1,18 @@
+
 export const STAGES = ["Diagnosis Confirmed", "In Repair", "Ready for Pickup"];
 
+/**
+ * Final outcomes for unrepairable devices, chosen by the CUSTOMER (not the
+ * freelancer). Proposed change from the original Milestone 3 FR-F6 spec,
+ * where the freelancer picked Donate / Reuse for Parts / Recycle directly.
+ */
 export const CUSTOMER_OUTCOMES = [
   "Returned to Customer",
   "Donated",
   "Reused for Parts",
   "Recycled",
 ];
+
 export const REPORT_REASONS = [
   "Inappropriate behavior",
   "Misleading or fake content",
@@ -23,12 +30,15 @@ export class RuleError extends Error {
   }
 }
 
+/* helpers */
 
 export const now = () => new Date().toISOString();
 
+/** Tiny non-cryptographic hash for demo fixtures only. */
 export function demoHash(value) {
   let h = 5381;
-  for (let i = 0; i < value.length; i++) h = ((h << 5) + h + value.charCodeAt(i)) | 0;
+  for (let i = 0; i < value.length; i++)
+    h = ((h << 5) + h + value.charCodeAt(i)) | 0;
   return "demo$" + (h >>> 0).toString(16);
 }
 
@@ -53,16 +63,16 @@ export function categoryName(state, id) {
 }
 
 function audit(state, actorId, action) {
-    return [
-      {
-        id: `AU-${state.auditLog.length + 1}`,
-        at: now(),
-        actorId,
-        action,
-      },
-      ...state.auditLog,
-    ];
-  }
+  return [
+    {
+      id: `AU-${state.auditLog.length + 1}`,
+      at: now(),
+      actorId,
+      action,
+    },
+    ...state.auditLog,
+  ];
+}
 
 function getUser(state, id) {
   const u = state.users.find((x) => x.id === id);
@@ -72,8 +82,10 @@ function getUser(state, id) {
 
 function requireRole(state, id, role) {
   const u = getUser(state, id);
-  if (u.role !== role) throw new RuleError("You are not allowed to perform this action.");
-  if (u.status !== "Active") throw new RuleError("Your account is not active.");
+  if (u.role !== role)
+    throw new RuleError("You are not allowed to perform this action.");
+  if (u.status !== "Active")
+    throw new RuleError("Your account is not active.");
   return u;
 }
 
@@ -81,12 +93,19 @@ export function validateRegistration(state, input) {
   const errors = {};
   if (!input.name.trim()) errors["name"] = "Full name is required.";
   if (!input.email.trim()) errors["email"] = "Email is required.";
-  else if (!EMAIL_RE.test(input.email.trim())) errors["email"] = "Enter a valid email address.";
-  else if (state.users.some((u) => u.email.toLowerCase() === input.email.trim().toLowerCase()))
+  else if (!EMAIL_RE.test(input.email.trim()))
+    errors["email"] = "Enter a valid email address.";
+  else if (
+    state.users.some(
+      (u) => u.email.toLowerCase() === input.email.trim().toLowerCase(),
+    )
+  )
     errors["email"] = "An account with this email already exists.";
+
   if (!input.phone.trim()) errors["phone"] = "Phone number is required.";
   else if (!/^\+?[0-9\s-]{8,15}$/.test(input.phone.trim()))
     errors["phone"] = "Enter a valid phone number (8–15 digits).";
+
   const pw = passwordProblem(input.password);
   if (pw) errors["password"] = pw;
   if (input.confirmPassword !== input.password)
@@ -110,27 +129,40 @@ export function register(state, input) {
     passwordHash: demoHash(input.password),
     status: "Pending Activation",
     joinedAt: now(),
-    ...(input.role === "freelancer" ? { categoryIds: input.categoryIds, bio: "", city: "" } : {}),
+    ...(input.role === "freelancer"
+      ? { categoryIds: input.categoryIds, bio: "", city: "" }
+      : {}),
   };
   return {
-    state: { ...state, users: [...state.users, user], counters: { ...state.counters, user: n } },
+    state: {
+      ...state,
+      users: [...state.users, user],
+      counters: { ...state.counters, user: n },
+    },
     userId: user.id,
   };
 }
 
 export function activate(state, userId) {
   const u = state.users.find((x) => x.id === userId);
-  if (!u) throw new RuleError("This activation link is invalid or has expired.");
-  if (u.status === "Suspended") throw new RuleError("This account is suspended.");
+  if (!u)
+    throw new RuleError("This activation link is invalid or has expired.");
+  if (u.status === "Suspended")
+    throw new RuleError("This account is suspended.");
   return {
     ...state,
-    users: state.users.map((x) => (x.id === userId ? { ...x, status: "Active" } : x)),
+    users: state.users.map((x) =>
+      x.id === userId ? { ...x, status: "Active" } : x,
+    ),
   };
 }
 
 export function login(state, email, password) {
-  if (!email.trim() || !password) throw new RuleError("Email and password are required.");
-  const u = state.users.find((x) => x.email.toLowerCase() === email.trim().toLowerCase());
+  if (!email.trim() || !password)
+    throw new RuleError("Email and password are required.");
+  const u = state.users.find(
+    (x) => x.email.toLowerCase() === email.trim().toLowerCase(),
+  );
   if (!u || u.passwordHash !== demoHash(password))
     throw new RuleError("Incorrect email or password.");
   if (u.status === "Pending Activation")
@@ -151,11 +183,15 @@ export const MIN_DESCRIPTION = 20;
 export function validateRequest(state, input) {
   const errors = {};
   const cat = state.categories.find((c) => c.id === input.categoryId);
-  if (!cat || !cat.active) errors["categoryId"] = "Select a device category.";
-  if (!input.title.trim()) errors["title"] = "Give your request a short title.";
+  if (!cat || !cat.active)
+    errors["categoryId"] = "Select a device category.";
+  if (!input.title.trim())
+    errors["title"] = "Give your request a short title.";
   if (input.description.trim().length < MIN_DESCRIPTION)
-    errors["description"] = `Describe the problem in at least ${MIN_DESCRIPTION} characters.`;
-  if (input.photos.length === 0) errors["photos"] = "Upload at least one photo of the device.";
+    errors["description"] =
+      `Describe the problem in at least ${MIN_DESCRIPTION} characters.`;
+  if (input.photos.length === 0)
+    errors["photos"] = "Upload at least one photo of the device.";
   return errors;
 }
 
@@ -189,7 +225,8 @@ export function createRequest(state, customerId, input) {
 
 function ownRequest(state, customerId, requestId) {
   const r = state.requests.find((x) => x.id === requestId);
-  if (!r || r.customerId !== customerId) throw new RuleError("Repair request not found.");
+  if (!r || r.customerId !== customerId)
+    throw new RuleError("Repair request not found.");
   return r;
 }
 
@@ -201,13 +238,16 @@ export function acceptOffer(state, customerId, offerId) {
   if (req.status !== "Awaiting Offers" || req.assignedFreelancerId)
     throw new RuleError("This request already has an accepted offer.");
   if (offer.status !== "Pending")
-    throw new RuleError(`This offer is ${offer.status.toLowerCase()} and cannot be accepted.`);
+    throw new RuleError(
+      `This offer is ${offer.status.toLowerCase()} and cannot be accepted.`,
+    );
   const t = now();
   return {
     ...state,
     offers: state.offers.map((o) => {
       if (o.id === offerId) return { ...o, status: "Accepted" };
-      if (o.requestId === req.id && o.status === "Pending") return { ...o, status: "Not Selected" };
+      if (o.requestId === req.id && o.status === "Pending")
+        return { ...o, status: "Not Selected" };
       return o;
     }),
     requests: state.requests.map((r) =>
@@ -235,16 +275,21 @@ export function rejectOffer(state, customerId, offerId) {
   if (!offer) throw new RuleError("Offer not found.");
   ownRequest(state, customerId, offer.requestId);
   if (offer.status !== "Pending")
-    throw new RuleError(`This offer is already ${offer.status.toLowerCase()}.`);
+    throw new RuleError(
+      `This offer is already ${offer.status.toLowerCase()}.`,
+    );
   return {
     ...state,
-    offers: state.offers.map((o) => (o.id === offerId ? { ...o, status: "Rejected" } : o)),
+    offers: state.offers.map((o) =>
+      o.id === offerId ? { ...o, status: "Rejected" } : o,
+    ),
   };
 }
 
 export function reviewEligibility(state, customerId, requestId) {
   const r = state.requests.find((x) => x.id === requestId);
-  if (!r || r.customerId !== customerId) return "Only the owner of this repair can review it.";
+  if (!r || r.customerId !== customerId)
+    return "Only the owner of this repair can review it.";
   if (r.status !== "Closed" || r.outcome !== "Completed")
     return "Only completed repairs can be reviewed.";
   if (state.reviews.some((v) => v.requestId === requestId))
@@ -282,9 +327,13 @@ export function submitReport(state, reporterId, input) {
   const u = getUser(state, reporterId);
   if (u.role === "admin" || u.status !== "Active")
     throw new RuleError("You cannot submit reports.");
-  if (!input.reason) throw new RuleError("Choose a reason for the report.", "reason");
+  if (!input.reason)
+    throw new RuleError("Choose a reason for the report.", "reason");
   if (input.description.trim().length < 10)
-    throw new RuleError("Describe the issue in at least 10 characters.", "description");
+    throw new RuleError(
+      "Describe the issue in at least 10 characters.",
+      "description",
+    );
   const n = state.counters.report + 1;
   const report = {
     id: `RP-${n}`,
@@ -304,41 +353,49 @@ export function submitReport(state, reporterId, input) {
   };
 }
 
+/* ---------------- Freelancer ---------------- */
 
 export function relevantRequests(state, freelancerId) {
-  const f = getUser(state, freelancerId);
+  const f = requireRole(state, freelancerId, "freelancer");
   const cats = f.categoryIds ?? [];
   return state.requests.filter(
-    (r) => r.status === "Awaiting Offers" && !r.removed && cats.includes(r.categoryId),
+    (r) =>
+      r.status === "Awaiting Offers" &&
+      !r.removed &&
+      cats.includes(r.categoryId),
   );
 }
 
 export function submitOffer(state, freelancerId, requestId, price, note) {
   const f = requireRole(state, freelancerId, "freelancer");
   const req = state.requests.find((r) => r.id === requestId);
-  if (!req || req.removed) throw new RuleError("Repair request not found.");
+  if (!req || req.removed)
+    throw new RuleError("Repair request not found.");
   if (req.status !== "Awaiting Offers")
     throw new RuleError("This request is no longer accepting offers.");
   if (!(f.categoryIds ?? []).includes(req.categoryId))
-    throw new RuleError("This request does not match your repair categories.");
+    throw new RuleError(
+      "This request does not match your repair categories.",
+    );
   if (!Number.isFinite(price) || price <= 0)
     throw new RuleError("Enter a price greater than 0.", "price");
-  if (price > 100000) throw new RuleError("Enter a realistic price estimate.", "price");
-  if (note.length > 500) throw new RuleError("Note must be 500 characters or fewer.", "note");
-  if (
-    state.offers.some(
-      (o) => o.requestId === requestId && o.freelancerId === freelancerId && o.status === "Pending",
-    )
-  )
-    throw new RuleError("You already have an active offer on this request.");
+  if (price > 100000)
+    throw new RuleError("Enter a realistic price estimate.", "price");
+  if (note.length > 500)
+    throw new RuleError("Note must be 500 characters or fewer.", "note");
   if (
     state.offers.some(
       (o) =>
-        o.requestId === requestId && o.freelancerId === freelancerId && o.status === "Rejected",
+        o.requestId === requestId &&
+        o.freelancerId === freelancerId &&
+        o.status === "Pending",
     )
-  ) {
-    
-  }
+  )
+    throw new RuleError(
+      "You already have an active offer on this request.",
+    );
+
+  // Rejected offers may be resubmitted; only an existing Pending offer blocks submission.
   const n = state.counters.offer + 1;
   const offer = {
     id: `OF-${n}`,
@@ -349,16 +406,24 @@ export function submitOffer(state, freelancerId, requestId, price, note) {
     createdAt: now(),
     status: "Pending",
   };
-  return { ...state, offers: [offer, ...state.offers], counters: { ...state.counters, offer: n } };
+  return {
+    ...state,
+    offers: [offer, ...state.offers],
+    counters: { ...state.counters, offer: n },
+  };
 }
 
 export function withdrawOffer(state, freelancerId, offerId) {
   const o = state.offers.find((x) => x.id === offerId);
-  if (!o || o.freelancerId !== freelancerId) throw new RuleError("Offer not found.");
-  if (o.status !== "Pending") throw new RuleError("Only pending offers can be withdrawn.");
+  if (!o || o.freelancerId !== freelancerId)
+    throw new RuleError("Offer not found.");
+  if (o.status !== "Pending")
+    throw new RuleError("Only pending offers can be withdrawn.");
   return {
     ...state,
-    offers: state.offers.map((x) => (x.id === offerId ? { ...x, status: "Withdrawn" } : x)),
+    offers: state.offers.map((x) =>
+      x.id === offerId ? { ...x, status: "Withdrawn" } : x,
+    ),
   };
 }
 
@@ -375,10 +440,18 @@ export function nextStage(stage) {
   return STAGES[i + 1] ?? null;
 }
 
-export function advanceStage(state, freelancerId, requestId, target, note = "") {
+export function advanceStage(
+  state,
+  freelancerId,
+  requestId,
+  target,
+  note = "",
+) {
   const r = assignedRepair(state, freelancerId, requestId);
   if (r.status !== "In Progress")
-    throw new RuleError("Progress can only be updated on in-progress repairs.");
+    throw new RuleError(
+      "Progress can only be updated on in-progress repairs.",
+    );
   const expected = nextStage(r.stage);
   if (target !== expected)
     throw new RuleError(
@@ -393,25 +466,46 @@ export function advanceStage(state, freelancerId, requestId, target, note = "") 
         ? {
             ...x,
             stage: target,
-            history: [...x.history, { label: target, at: now(), note: note.trim() || undefined }],
+            history: [
+              ...x.history,
+              {
+                label: target,
+                at: now(),
+                note: note.trim() || undefined,
+              },
+            ],
           }
         : x,
     ),
   };
 }
 
-
-export function recordOutcome(state, freelancerId, requestId, outcome) {
+/**
+ * FR-F6 (updated workflow): the freelancer can only record a successful
+ * completion. Unrepairable devices go through markUnrepairable + chooseOutcome
+ * so the customer — the device owner — decides the final outcome.
+ */
+export function recordOutcome(
+  state,
+  freelancerId,
+  requestId,
+  outcome,
+) {
   const r = assignedRepair(state, freelancerId, requestId);
   if (r.outcome || r.status === "Closed")
-    throw new RuleError("An outcome has already been recorded for this repair.");
+    throw new RuleError(
+      "An outcome has already been recorded for this repair.",
+    );
   if (outcome !== "Completed")
     throw new RuleError(
       "Unrepairable devices must be marked unrepairable so the customer decides.",
     );
-  if (r.status !== "In Progress") throw new RuleError("Only in-progress repairs can be closed.");
+  if (r.status !== "In Progress")
+    throw new RuleError("Only in-progress repairs can be closed.");
   if (r.stage !== "Ready for Pickup")
-    throw new RuleError('Move the repair to "Ready for Pickup" before marking it completed.');
+    throw new RuleError(
+      'Move the repair to "Ready for Pickup" before marking it completed.',
+    );
   const t = now();
   return {
     ...state,
@@ -422,22 +516,34 @@ export function recordOutcome(state, freelancerId, requestId, outcome) {
             status: "Closed",
             outcome,
             closedAt: t,
-            history: [...x.history, { label: "Repair completed", at: t }],
+            history: [
+              ...x.history,
+              { label: "Repair completed", at: t },
+            ],
           }
         : x,
     ),
   };
 }
 
-
+/**
+ * Freelancer marks the device unrepairable. The request stays open as
+ * "Awaiting Customer Decision" until the customer picks the final outcome.
+ */
 export function markUnrepairable(state, freelancerId, requestId) {
   const r = assignedRepair(state, freelancerId, requestId);
   if (r.outcome || r.status === "Closed")
-    throw new RuleError("An outcome has already been recorded for this repair.");
+    throw new RuleError(
+      "An outcome has already been recorded for this repair.",
+    );
   if (r.status === "Awaiting Customer Decision")
-    throw new RuleError("This repair is already waiting for the customer's decision.");
+    throw new RuleError(
+      "This repair is already waiting for the customer's decision.",
+    );
   if (r.status !== "In Progress")
-    throw new RuleError("Only in-progress repairs can be marked unrepairable.");
+    throw new RuleError(
+      "Only in-progress repairs can be marked unrepairable.",
+    );
   const t = now();
   return {
     ...state,
@@ -448,7 +554,10 @@ export function markUnrepairable(state, freelancerId, requestId) {
             status: "Awaiting Customer Decision",
             history: [
               ...x.history,
-              { label: "Marked unrepairable — awaiting customer decision", at: t },
+              {
+                label: "Marked unrepairable — awaiting customer decision",
+                at: t,
+              },
             ],
           }
         : x,
@@ -456,15 +565,28 @@ export function markUnrepairable(state, freelancerId, requestId) {
   };
 }
 
-export function chooseOutcome(state, customerId, requestId, outcome) {
+/** Customer chooses what happens to their unrepairable device; closes the request. */
+export function chooseOutcome(
+  state,
+  customerId,
+  requestId,
+  outcome,
+) {
   requireRole(state, customerId, "customer");
   const r = ownRequest(state, customerId, requestId);
   if (r.status === "Closed" || r.outcome)
-    throw new RuleError("A final decision has already been recorded for this repair.");
+    throw new RuleError(
+      "A final decision has already been recorded for this repair.",
+    );
   if (r.status !== "Awaiting Customer Decision")
-    throw new RuleError("This request is not waiting for a customer decision.");
+    throw new RuleError(
+      "This request is not waiting for a customer decision.",
+    );
   if (!CUSTOMER_OUTCOMES.includes(outcome))
-    throw new RuleError("Choose one of the available options.", "outcome");
+    throw new RuleError(
+      "Choose one of the available options.",
+      "outcome",
+    );
   const t = now();
   return {
     ...state,
@@ -475,7 +597,13 @@ export function chooseOutcome(state, customerId, requestId, outcome) {
             status: "Closed",
             outcome,
             closedAt: t,
-            history: [...x.history, { label: `Customer decision — ${outcome}`, at: t }],
+            history: [
+              ...x.history,
+              {
+                label: `Customer decision — ${outcome}`,
+                at: t,
+              },
+            ],
           }
         : x,
     ),
@@ -484,11 +612,20 @@ export function chooseOutcome(state, customerId, requestId, outcome) {
 
 export function updateProfile(state, freelancerId, input) {
   requireRole(state, freelancerId, "freelancer");
-  if (!input.name.trim()) throw new RuleError("Full name is required.", "name");
-  if (!input.phone.trim()) throw new RuleError("Phone number is required.", "phone");
+  if (!input.name.trim())
+    throw new RuleError("Full name is required.", "name");
+  if (!input.phone.trim())
+    throw new RuleError("Phone number is required.", "phone");
   if (input.categoryIds.length === 0)
-    throw new RuleError("At least one repair category must remain selected.", "categoryIds");
-  if (input.bio.length > 400) throw new RuleError("Bio must be 400 characters or fewer.", "bio");
+    throw new RuleError(
+      "At least one repair category must remain selected.",
+      "categoryIds",
+    );
+  if (input.bio.length > 400)
+    throw new RuleError(
+      "Bio must be 400 characters or fewer.",
+      "bio",
+    );
   return {
     ...state,
     users: state.users.map((u) =>
@@ -506,15 +643,22 @@ export function updateProfile(state, freelancerId, input) {
   };
 }
 
+/* ---------------- Admin ---------------- */
 
 export function setUserStatus(state, adminId, userId, status) {
   requireRole(state, adminId, "admin");
   const u = getUser(state, userId);
-  if (u.role === "admin") throw new RuleError("Admin accounts cannot be changed here.");
-  if (u.status === status) throw new RuleError(`Account is already ${status.toLowerCase()}.`);
+  if (u.role === "admin")
+    throw new RuleError("Admin accounts cannot be changed here.");
+  if (u.status === status)
+    throw new RuleError(
+      `Account is already ${status.toLowerCase()}.`,
+    );
   return {
     ...state,
-    users: state.users.map((x) => (x.id === userId ? { ...x, status } : x)),
+    users: state.users.map((x) =>
+      x.id === userId ? { ...x, status } : x,
+    ),
     auditLog: audit(
       state,
       adminId,
@@ -525,10 +669,27 @@ export function setUserStatus(state, adminId, userId, status) {
 
 function validateCategoryName(state, name, exceptId) {
   const n = name.trim();
-  if (!n) throw new RuleError("Category name cannot be empty.", "name");
-  if (n.length > 40) throw new RuleError("Category name must be 40 characters or fewer.", "name");
-  if (state.categories.some((c) => c.id !== exceptId && c.name.toLowerCase() === n.toLowerCase()))
-    throw new RuleError("A category with this name already exists.", "name");
+  if (!n)
+    throw new RuleError(
+      "Category name cannot be empty.",
+      "name",
+    );
+  if (n.length > 40)
+    throw new RuleError(
+      "Category name must be 40 characters or fewer.",
+      "name",
+    );
+  if (
+    state.categories.some(
+      (c) =>
+        c.id !== exceptId &&
+        c.name.toLowerCase() === n.toLowerCase(),
+    )
+  )
+    throw new RuleError(
+      "A category with this name already exists.",
+      "name",
+    );
   return n;
 }
 
@@ -536,11 +697,21 @@ export function addCategory(state, adminId, name) {
   requireRole(state, adminId, "admin");
   const n = validateCategoryName(state, name);
   const id =
-    "cat-" + n.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + (state.categories.length + 1);
+    "cat-" +
+    n.toLowerCase().replace(/[^a-z0-9]+/g, "-") +
+    "-" +
+    (state.categories.length + 1);
   return {
     ...state,
-    categories: [...state.categories, { id, name: n, active: true }],
-    auditLog: audit(state, adminId, `Added category ${n}`),
+    categories: [
+      ...state.categories,
+      { id, name: n, active: true },
+    ],
+    auditLog: audit(
+      state,
+      adminId,
+      `Added category ${n}`,
+    ),
   };
 }
 
@@ -549,105 +720,219 @@ export function renameCategory(state, adminId, id, name) {
   const n = validateCategoryName(state, name, id);
   return {
     ...state,
-    categories: state.categories.map((c) => (c.id === id ? { ...c, name: n } : c)),
+    categories: state.categories.map((c) =>
+      c.id === id ? { ...c, name: n } : c,
+    ),
   };
 }
 
 export function categoryUsage(state, id) {
   const activeRequests = state.requests.filter(
-    (r) => r.categoryId === id && r.status !== "Closed",
+    (r) =>
+      r.categoryId === id &&
+      r.status !== "Closed",
   ).length;
-  const anyRequests = state.requests.filter((r) => r.categoryId === id).length;
-  const providers = state.users.filter((u) => u.categoryIds?.includes(id)).length;
-  return { activeRequests, anyRequests, providers };
+  const anyRequests = state.requests.filter(
+    (r) => r.categoryId === id,
+  ).length;
+  const providers = state.users.filter(
+    (u) => u.categoryIds?.includes(id),
+  ).length;
+  return {
+    activeRequests,
+    anyRequests,
+    providers,
+  };
 }
 
 export function removeCategory(state, adminId, id) {
   requireRole(state, adminId, "admin");
   const usage = categoryUsage(state, id);
   if (usage.activeRequests > 0)
-    throw new RuleError("This category is used by active requests. Deactivate it instead.");
+    throw new RuleError(
+      "This category is used by active requests. Deactivate it instead.",
+    );
   if (usage.anyRequests > 0)
-    throw new RuleError("This category appears in repair history. Deactivate it instead.");
+    throw new RuleError(
+      "This category appears in repair history. Deactivate it instead.",
+    );
   return {
     ...state,
-    categories: state.categories.filter((c) => c.id !== id),
+    categories: state.categories.filter(
+      (c) => c.id !== id,
+    ),
     users: state.users.map((u) =>
-      u.categoryIds ? { ...u, categoryIds: u.categoryIds.filter((c) => c !== id) } : u,
+      u.categoryIds
+        ? {
+            ...u,
+            categoryIds: u.categoryIds.filter(
+              (c) => c !== id,
+            ),
+          }
+        : u,
     ),
   };
 }
 
-export function setCategoryActive(state, adminId, id, active) {
+export function setCategoryActive(
+  state,
+  adminId,
+  id,
+  active,
+) {
   requireRole(state, adminId, "admin");
   return {
     ...state,
-    categories: state.categories.map((c) => (c.id === id ? { ...c, active } : c)),
+    categories: state.categories.map((c) =>
+      c.id === id ? { ...c, active } : c,
+    ),
   };
 }
 
-export function markReportReviewed(state, adminId, reportId) {
+export function markReportReviewed(
+  state,
+  adminId,
+  reportId,
+) {
   requireRole(state, adminId, "admin");
-  const r = state.reports.find((x) => x.id === reportId);
-  if (!r) throw new RuleError("Report not found.");
-  if (r.status !== "Open") throw new RuleError("This report has already been reviewed.");
+  const r = state.reports.find(
+    (x) => x.id === reportId,
+  );
+  if (!r)
+    throw new RuleError("Report not found.");
+  if (r.status !== "Open")
+    throw new RuleError(
+      "This report has already been reviewed.",
+    );
   return {
     ...state,
-    reports: state.reports.map((x) => (x.id === reportId ? { ...x, status: "Reviewed" } : x)),
+    reports: state.reports.map((x) =>
+      x.id === reportId
+        ? { ...x, status: "Reviewed" }
+        : x,
+    ),
   };
 }
 
 /** The account responsible for the reported item. */
 export function reportedAccountId(state, report) {
-  if (report.targetType === "user") return report.targetId;
+  if (report.targetType === "user")
+    return report.targetId;
   if (report.targetType === "request")
-    return state.requests.find((r) => r.id === report.targetId)?.customerId;
-  return state.offers.find((o) => o.id === report.targetId)?.freelancerId;
+    return state.requests.find(
+      (r) => r.id === report.targetId,
+    )?.customerId;
+  return state.offers.find(
+    (o) => o.id === report.targetId,
+  )?.freelancerId;
 }
 
-export function moderateReport(state, adminId, reportId, action, note) {
+export function moderateReport(
+  state,
+  adminId,
+  reportId,
+  action,
+  note,
+) {
   requireRole(state, adminId, "admin");
-  const report = state.reports.find((x) => x.id === reportId);
-  if (!report) throw new RuleError("Report not found.");
-  if (report.status === "Resolved") throw new RuleError("This report is already resolved.");
-  if (action !== "dismiss" && note.trim().length < 5)
-    throw new RuleError("Add a short note explaining the decision.", "note");
+  const report = state.reports.find(
+    (x) => x.id === reportId,
+  );
+  if (!report)
+    throw new RuleError("Report not found.");
+  if (report.status === "Resolved")
+    throw new RuleError(
+      "This report is already resolved.",
+    );
+  if (
+    ![
+      "dismiss",
+      "remove-content",
+      "suspend-account",
+    ].includes(action)
+  )
+    throw new RuleError(
+      "Choose a valid moderation action.",
+      "action",
+    );
+  if (
+    action !== "dismiss" &&
+    note.trim().length < 5
+  )
+    throw new RuleError(
+      "Add a short note explaining the decision.",
+      "note",
+    );
+
   let next = { ...state };
   let decision = "Dismissed — no violation found";
+
   if (action === "remove-content") {
     if (report.targetType === "request") {
       next.requests = next.requests.map((r) =>
-        r.id === report.targetId ? { ...r, removed: true } : r,
+        r.id === report.targetId
+          ? { ...r, removed: true }
+          : r,
       );
       next.offers = next.offers.map((o) =>
-        o.requestId === report.targetId && o.status === "Pending"
+        o.requestId === report.targetId &&
+        o.status === "Pending"
           ? { ...o, status: "Withdrawn" }
           : o,
       );
       decision = "Request listing removed";
     } else if (report.targetType === "offer") {
       next.offers = next.offers.map((o) =>
-        o.id === report.targetId && o.status === "Pending" ? { ...o, status: "Withdrawn" } : o,
+        o.id === report.targetId &&
+        o.status === "Pending"
+          ? { ...o, status: "Withdrawn" }
+          : o,
       );
       decision = "Offer withdrawn by moderator";
     } else {
-      throw new RuleError("A user profile cannot be removed. Suspend the account instead.");
+      throw new RuleError(
+        "A user profile cannot be removed. Suspend the account instead.",
+      );
     }
   }
+
   if (action === "suspend-account") {
-    const uid = reportedAccountId(state, report);
-    if (!uid) throw new RuleError("No account is linked to this report.");
+    const uid = reportedAccountId(
+      state,
+      report,
+    );
+    if (!uid)
+      throw new RuleError(
+        "No account is linked to this report.",
+      );
     const u = getUser(state, uid);
-    if (u.status !== "Suspended") next = setUserStatus(next, adminId, uid, "Suspended");
+    if (u.status !== "Suspended")
+      next = setUserStatus(
+        next,
+        adminId,
+        uid,
+        "Suspended",
+      );
     decision = `Account suspended: ${u.name}`;
   }
+
   return {
     ...next,
     reports: next.reports.map((x) =>
       x.id === reportId
-        ? { ...x, status: "Resolved", decision, decisionNote: note.trim(), decidedAt: now() }
+        ? {
+            ...x,
+            status: "Resolved",
+            decision,
+            decisionNote: note.trim(),
+            decidedAt: now(),
+          }
         : x,
     ),
-    auditLog: audit(next, adminId, `Resolved ${reportId}: ${decision}`),
+    auditLog: audit(
+      next,
+      adminId,
+      `Resolved ${reportId}: ${decision}`,
+    ),
   };
 }
