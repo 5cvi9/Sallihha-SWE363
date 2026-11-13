@@ -53,8 +53,16 @@ export function categoryName(state, id) {
 }
 
 function audit(state, actorId, action) {
-  return [{ id: `AU-${state.audit.length + 1}`, at: now(), actorId, action }, ...state.audit];
-}
+    return [
+      {
+        id: `AU-${state.auditLog.length + 1}`,
+        at: now(),
+        actorId,
+        action,
+      },
+      ...state.auditLog,
+    ];
+  }
 
 function getUser(state, id) {
   const u = state.users.find((x) => x.id === id);
@@ -507,7 +515,7 @@ export function setUserStatus(state, adminId, userId, status) {
   return {
     ...state,
     users: state.users.map((x) => (x.id === userId ? { ...x, status } : x)),
-    audit: audit(
+    auditLog: audit(
       state,
       adminId,
       `${status === "Suspended" ? "Suspended" : "Reactivated"} ${u.name} (${u.id})`,
@@ -532,7 +540,7 @@ export function addCategory(state, adminId, name) {
   return {
     ...state,
     categories: [...state.categories, { id, name: n, active: true }],
-    audit: audit(state, adminId, `Added category ${n}`),
+    auditLog: audit(state, adminId, `Added category ${n}`),
   };
 }
 
@@ -640,6 +648,6 @@ export function moderateReport(state, adminId, reportId, action, note) {
         ? { ...x, status: "Resolved", decision, decisionNote: note.trim(), decidedAt: now() }
         : x,
     ),
-    audit: audit(next, adminId, `Resolved ${reportId}: ${decision}`),
+    auditLog: audit(next, adminId, `Resolved ${reportId}: ${decision}`),
   };
 }
