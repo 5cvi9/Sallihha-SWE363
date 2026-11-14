@@ -1,0 +1,682 @@
+
+/**
+ * Mock data shared by all three roles.
+ * All relationships are consistent:
+ * accepted offers reference the correct request and freelancer,
+ * and reviews exist only for completed repairs.
+ */
+
+import { demoHash } from "@/lib/sallihha";
+
+export const DEMO_ACCOUNTS = [
+  {
+    role: "Customer",
+    email: "sara@example.com",
+    password: "Customer123",
+    note: "Has open, in-progress and closed repairs",
+  },
+  {
+    role: "Freelancer",
+    email: "omar@example.com",
+    password: "Freelancer123",
+    note: "Repairs Phones and Tablets",
+  },
+  {
+    role: "Admin",
+    email: "admin@sallihha.sa",
+    password: "Admin12345",
+    note: "Internally provisioned account",
+  },
+  {
+    role: "Customer (inactive)",
+    email: "reem@example.com",
+    password: "Customer123",
+    note: "Shows the inactive-account message",
+  },
+  {
+    role: "Customer (suspended)",
+    email: "khalid@example.com",
+    password: "Customer123",
+    note: "Shows the suspended-account message",
+  },
+];
+
+const d = (s) => new Date(s).toISOString();
+
+export function createSeed() {
+  const cust = demoHash("Customer123");
+  const free = demoHash("Freelancer123");
+
+  return {
+    categories: [
+      { id: "cat-phones", name: "Phones", active: true },
+      { id: "cat-laptops", name: "Laptops", active: true },
+      { id: "cat-tablets", name: "Tablets", active: true },
+      { id: "cat-watches", name: "Smartwatches", active: true },
+      { id: "cat-consoles", name: "Gaming Consoles", active: true },
+      { id: "cat-audio", name: "Headphones & Audio", active: false },
+    ],
+
+    users: [
+      {
+        id: "U-1",
+        role: "admin",
+        name: "Noura Al-Qahtani",
+        email: "admin@sallihha.sa",
+        phone: "+966 50 000 0001",
+        passwordHash: demoHash("Admin12345"),
+        status: "Active",
+        joinedAt: d("2026-01-05"),
+      },
+      {
+        id: "U-2",
+        role: "customer",
+        name: "Sara Al-Harbi",
+        email: "sara@example.com",
+        phone: "+966 55 123 4567",
+        passwordHash: cust,
+        status: "Active",
+        joinedAt: d("2026-03-11"),
+      },
+      {
+        id: "U-3",
+        role: "customer",
+        name: "Faisal Al-Mutairi",
+        email: "faisal@example.com",
+        phone: "+966 54 765 1122",
+        passwordHash: cust,
+        status: "Active",
+        joinedAt: d("2026-04-20"),
+      },
+      {
+        id: "U-4",
+        role: "customer",
+        name: "Reem Al-Dosari",
+        email: "reem@example.com",
+        phone: "+966 56 222 8890",
+        passwordHash: cust,
+        status: "Pending Activation",
+        joinedAt: d("2026-10-28"),
+      },
+      {
+        id: "U-5",
+        role: "customer",
+        name: "Khalid Al-Ghamdi",
+        email: "khalid@example.com",
+        phone: "+966 53 909 3344",
+        passwordHash: cust,
+        status: "Suspended",
+        joinedAt: d("2026-02-14"),
+      },
+      {
+        id: "U-6",
+        role: "freelancer",
+        name: "Omar Faris",
+        email: "omar@example.com",
+        phone: "+966 50 456 7788",
+        passwordHash: free,
+        status: "Active",
+        joinedAt: d("2026-02-02"),
+        categoryIds: ["cat-phones", "cat-tablets"],
+        city: "Dhahran",
+        yearsExperience: 6,
+        bio: "Phone and tablet specialist. Screen, battery and charging-port repairs with genuine-grade parts.",
+      },
+      {
+        id: "U-7",
+        role: "freelancer",
+        name: "Lina Haddad",
+        email: "lina@example.com",
+        phone: "+966 59 311 2020",
+        passwordHash: free,
+        status: "Active",
+        joinedAt: d("2026-01-22"),
+        categoryIds: ["cat-laptops", "cat-tablets"],
+        city: "Al Khobar",
+        yearsExperience: 8,
+        bio: "Laptop board-level diagnostics, keyboards, hinges and SSD upgrades.",
+      },
+      {
+        id: "U-8",
+        role: "freelancer",
+        name: "Yousef Al-Shehri",
+        email: "yousef@example.com",
+        phone: "+966 55 870 6060",
+        passwordHash: free,
+        status: "Active",
+        joinedAt: d("2026-05-09"),
+        categoryIds: ["cat-phones", "cat-watches"],
+        city: "Dammam",
+        yearsExperience: 4,
+        bio: "Fast phone screen replacements and smartwatch battery swaps.",
+      },
+      {
+        id: "U-9",
+        role: "freelancer",
+        name: "Majed Al-Otaibi",
+        email: "majed@example.com",
+        phone: "+966 58 100 4433",
+        passwordHash: free,
+        status: "Active",
+        joinedAt: d("2026-06-01"),
+        categoryIds: ["cat-consoles", "cat-laptops"],
+        city: "Riyadh",
+        yearsExperience: 3,
+        bio: "Console HDMI ports, overheating and controller drift.",
+      },
+    ],
+
+    requests: [
+      {
+        id: "REQ-2041",
+        customerId: "U-2",
+        categoryId: "cat-phones",
+        title: "Screen flickers and turns green",
+        deviceModel: "iPhone 13",
+        description:
+          "Since a small drop last week the screen flickers and sometimes turns green. Touch still works but the display is hard to read.",
+        photos: [],
+        createdAt: d("2026-10-30T09:10:00"),
+        status: "Awaiting Offers",
+        history: [
+          {
+            label: "Request posted",
+            at: d("2026-10-30T09:10:00"),
+          },
+        ],
+      },
+      {
+        id: "REQ-2042",
+        customerId: "U-2",
+        categoryId: "cat-tablets",
+        title: "Battery drains in under two hours",
+        deviceModel: "iPad Air (4th gen)",
+        description:
+          "The tablet battery goes from full to empty in under two hours even with light use. It also gets warm while charging.",
+        photos: [],
+        createdAt: d("2026-10-29T15:30:00"),
+        status: "Awaiting Offers",
+        history: [
+          {
+            label: "Request posted",
+            at: d("2026-10-29T15:30:00"),
+          },
+        ],
+      },
+      {
+        id: "REQ-2043",
+        customerId: "U-3",
+        categoryId: "cat-phones",
+        title: "Charging port works intermittently",
+        deviceModel: "Samsung Galaxy S22",
+        description:
+          "The charger only works when the cable is held at an angle. I've tried different cables and the problem stays.",
+        photos: [],
+        createdAt: d("2026-10-31T11:00:00"),
+        status: "Awaiting Offers",
+        history: [
+          {
+            label: "Request posted",
+            at: d("2026-10-31T11:00:00"),
+          },
+        ],
+      },
+      {
+        id: "REQ-2038",
+        customerId: "U-2",
+        categoryId: "cat-laptops",
+        title: "Several keyboard keys not responding",
+        deviceModel: "Lenovo ThinkPad T14",
+        description:
+          "The E, R and 4 keys stopped responding after a small coffee spill. The rest of the laptop works normally.",
+        photos: [],
+        createdAt: d("2026-10-22T10:00:00"),
+        status: "In Progress",
+        assignedFreelancerId: "U-7",
+        acceptedOfferId: "OF-3005",
+        stage: "In Repair",
+        history: [
+          {
+            label: "Request posted",
+            at: d("2026-10-22T10:00:00"),
+          },
+          {
+            label: "Offer accepted",
+            at: d("2026-10-23T08:20:00"),
+            note: "SAR 320",
+          },
+          {
+            label: "Diagnosis Confirmed",
+            at: d("2026-10-23T08:20:00"),
+          },
+          {
+            label: "In Repair",
+            at: d("2026-10-25T13:45:00"),
+            note: "Replacement keyboard ordered and installed.",
+          },
+        ],
+      },
+      {
+        id: "REQ-2036",
+        customerId: "U-3",
+        categoryId: "cat-phones",
+        title: "Back glass cracked",
+        deviceModel: "iPhone 14 Pro",
+        description:
+          "The back glass is cracked across the camera area. Camera still works but I want it fixed before it spreads.",
+        photos: [],
+        createdAt: d("2026-10-18T09:00:00"),
+        status: "In Progress",
+        assignedFreelancerId: "U-6",
+        acceptedOfferId: "OF-3008",
+        stage: "Diagnosis Confirmed",
+        history: [
+          {
+            label: "Request posted",
+            at: d("2026-10-18T09:00:00"),
+          },
+          {
+            label: "Offer accepted",
+            at: d("2026-10-19T16:00:00"),
+            note: "SAR 280",
+          },
+          {
+            label: "Diagnosis Confirmed",
+            at: d("2026-10-19T16:00:00"),
+          },
+        ],
+      },
+      {
+        id: "REQ-2021",
+        customerId: "U-2",
+        categoryId: "cat-phones",
+        title: "Phone won't charge past 60%",
+        deviceModel: "Google Pixel 7",
+        description:
+          "Battery stops charging at around 60 percent and drains quickly afterwards. The phone is two years old.",
+        photos: [],
+        createdAt: d("2026-09-02T10:00:00"),
+        status: "Closed",
+        assignedFreelancerId: "U-6",
+        acceptedOfferId: "OF-3001",
+        stage: "Ready for Pickup",
+        outcome: "Completed",
+        closedAt: d("2026-09-07T17:00:00"),
+        history: [
+          {
+            label: "Request posted",
+            at: d("2026-09-02T10:00:00"),
+          },
+          {
+            label: "Offer accepted",
+            at: d("2026-09-03T09:00:00"),
+            note: "SAR 190",
+          },
+          {
+            label: "Diagnosis Confirmed",
+            at: d("2026-09-03T09:00:00"),
+          },
+          {
+            label: "In Repair",
+            at: d("2026-09-05T12:00:00"),
+          },
+          {
+            label: "Ready for Pickup",
+            at: d("2026-09-07T11:00:00"),
+          },
+          {
+            label: "Repair completed",
+            at: d("2026-09-07T17:00:00"),
+          },
+        ],
+      },
+      {
+        id: "REQ-2027",
+        customerId: "U-2",
+        categoryId: "cat-phones",
+        title: "Cracked front screen",
+        deviceModel: "Samsung Galaxy A54",
+        description:
+          "Front screen cracked in the top corner after falling from a desk. Touch works but the glass is sharp.",
+        photos: [],
+        createdAt: d("2026-09-20T10:00:00"),
+        status: "Closed",
+        assignedFreelancerId: "U-8",
+        acceptedOfferId: "OF-3003",
+        stage: "Ready for Pickup",
+        outcome: "Completed",
+        closedAt: d("2026-09-24T15:00:00"),
+        history: [
+          {
+            label: "Request posted",
+            at: d("2026-09-20T10:00:00"),
+          },
+          {
+            label: "Offer accepted",
+            at: d("2026-09-21T09:00:00"),
+            note: "SAR 240",
+          },
+          {
+            label: "Diagnosis Confirmed",
+            at: d("2026-09-21T09:00:00"),
+          },
+          {
+            label: "In Repair",
+            at: d("2026-09-22T12:00:00"),
+          },
+          {
+            label: "Ready for Pickup",
+            at: d("2026-09-24T10:00:00"),
+          },
+          {
+            label: "Repair completed",
+            at: d("2026-09-24T15:00:00"),
+          },
+        ],
+      },
+      {
+        id: "REQ-2015",
+        customerId: "U-2",
+        categoryId: "cat-laptops",
+        title: "Laptop won't power on",
+        deviceModel: "Dell Inspiron 15 (2017)",
+        description:
+          "Old laptop does not power on at all. No lights or fan noise even when plugged in.",
+        photos: [],
+        createdAt: d("2026-08-10T10:00:00"),
+        status: "Closed",
+        assignedFreelancerId: "U-7",
+        acceptedOfferId: "OF-3002",
+        stage: "Diagnosis Confirmed",
+        outcome: "Recycled",
+        closedAt: d("2026-08-13T12:00:00"),
+        history: [
+          {
+            label: "Request posted",
+            at: d("2026-08-10T10:00:00"),
+          },
+          {
+            label: "Offer accepted",
+            at: d("2026-08-11T09:00:00"),
+            note: "SAR 150",
+          },
+          {
+            label: "Diagnosis Confirmed",
+            at: d("2026-08-11T09:00:00"),
+            note: "Motherboard failure, repair not economical.",
+          },
+          {
+            label: "Unrepairable — Recycled",
+            at: d("2026-08-13T12:00:00"),
+          },
+        ],
+      },
+      {
+        id: "REQ-2018",
+        customerId: "U-3",
+        categoryId: "cat-tablets",
+        title: "Tablet screen dead after water damage",
+        deviceModel: "Samsung Galaxy Tab A7",
+        description:
+          "Tablet fell into water and the screen stays black. It vibrates when turned on.",
+        photos: [],
+        createdAt: d("2026-08-22T10:00:00"),
+        status: "Closed",
+        assignedFreelancerId: "U-6",
+        acceptedOfferId: "OF-3004",
+        stage: "Diagnosis Confirmed",
+        outcome: "Reused for Parts",
+        closedAt: d("2026-08-26T12:00:00"),
+        history: [
+          {
+            label: "Request posted",
+            at: d("2026-08-22T10:00:00"),
+          },
+          {
+            label: "Offer accepted",
+            at: d("2026-08-23T09:00:00"),
+            note: "SAR 120",
+          },
+          {
+            label: "Diagnosis Confirmed",
+            at: d("2026-08-23T09:00:00"),
+          },
+          {
+            label: "Unrepairable — Reused for Parts",
+            at: d("2026-08-26T12:00:00"),
+          },
+        ],
+      },
+      {
+        id: "REQ-2010",
+        customerId: "U-3",
+        categoryId: "cat-phones",
+        title: "Speaker crackles on calls",
+        deviceModel: "iPhone 12",
+        description:
+          "The earpiece speaker crackles during calls and music sounds distorted at higher volume.",
+        photos: [],
+        createdAt: d("2026-07-14T10:00:00"),
+        status: "Closed",
+        assignedFreelancerId: "U-6",
+        acceptedOfferId: "OF-3006",
+        stage: "Ready for Pickup",
+        outcome: "Completed",
+        closedAt: d("2026-07-18T12:00:00"),
+        history: [
+          {
+            label: "Request posted",
+            at: d("2026-07-14T10:00:00"),
+          },
+          {
+            label: "Offer accepted",
+            at: d("2026-07-15T09:00:00"),
+            note: "SAR 160",
+          },
+          {
+            label: "Diagnosis Confirmed",
+            at: d("2026-07-15T09:00:00"),
+          },
+          {
+            label: "In Repair",
+            at: d("2026-07-16T12:00:00"),
+          },
+          {
+            label: "Ready for Pickup",
+            at: d("2026-07-18T10:00:00"),
+          },
+          {
+            label: "Repair completed",
+            at: d("2026-07-18T12:00:00"),
+          },
+        ],
+      },
+    ],
+
+    offers: [
+      {
+        id: "OF-3010",
+        requestId: "REQ-2041",
+        freelancerId: "U-8",
+        price: 260,
+        note: "Likely a display connector or panel issue. Can diagnose same day.",
+        createdAt: d("2026-10-30T12:00:00"),
+        status: "Pending",
+      },
+      {
+        id: "OF-3011",
+        requestId: "REQ-2042",
+        freelancerId: "U-6",
+        price: 220,
+        note: "Battery replacement with a high-capacity cell, 3-month warranty.",
+        createdAt: d("2026-10-29T18:00:00"),
+        status: "Pending",
+      },
+      {
+        id: "OF-3012",
+        requestId: "REQ-2042",
+        freelancerId: "U-7",
+        price: 195,
+        note: "I'll test the charging circuit first, then replace the battery if needed.",
+        createdAt: d("2026-10-30T08:30:00"),
+        status: "Pending",
+      },
+      {
+        id: "OF-3005",
+        requestId: "REQ-2038",
+        freelancerId: "U-7",
+        price: 320,
+        note: "Keyboard replacement and liquid-damage cleaning.",
+        createdAt: d("2026-10-22T14:00:00"),
+        status: "Accepted",
+      },
+      {
+        id: "OF-3007",
+        requestId: "REQ-2038",
+        freelancerId: "U-9",
+        price: 380,
+        note: "Full keyboard + top case replacement.",
+        createdAt: d("2026-10-22T16:00:00"),
+        status: "Not Selected",
+      },
+      {
+        id: "OF-3008",
+        requestId: "REQ-2036",
+        freelancerId: "U-6",
+        price: 280,
+        note: "Laser back-glass removal, no housing swap needed.",
+        createdAt: d("2026-10-18T12:00:00"),
+        status: "Accepted",
+      },
+      {
+        id: "OF-3009",
+        requestId: "REQ-2036",
+        freelancerId: "U-8",
+        price: 310,
+        note: "",
+        createdAt: d("2026-10-18T13:00:00"),
+        status: "Not Selected",
+      },
+      {
+        id: "OF-3001",
+        requestId: "REQ-2021",
+        freelancerId: "U-6",
+        price: 190,
+        note: "Battery replacement.",
+        createdAt: d("2026-09-02T14:00:00"),
+        status: "Accepted",
+      },
+      {
+        id: "OF-3003",
+        requestId: "REQ-2027",
+        freelancerId: "U-8",
+        price: 240,
+        note: "Screen replacement.",
+        createdAt: d("2026-09-20T13:00:00"),
+        status: "Accepted",
+      },
+      {
+        id: "OF-3002",
+        requestId: "REQ-2015",
+        freelancerId: "U-7",
+        price: 150,
+        note: "Diagnosis then repair if possible.",
+        createdAt: d("2026-08-10T15:00:00"),
+        status: "Accepted",
+      },
+      {
+        id: "OF-3004",
+        requestId: "REQ-2018",
+        freelancerId: "U-6",
+        price: 120,
+        note: "Water-damage assessment.",
+        createdAt: d("2026-08-22T14:00:00"),
+        status: "Accepted",
+      },
+      {
+        id: "OF-3006",
+        requestId: "REQ-2010",
+        freelancerId: "U-6",
+        price: 160,
+        note: "Earpiece replacement.",
+        createdAt: d("2026-07-14T14:00:00"),
+        status: "Accepted",
+      },
+    ],
+
+    reviews: [
+      {
+        id: "RV-1",
+        requestId: "REQ-2021",
+        customerId: "U-2",
+        freelancerId: "U-6",
+        rating: 5,
+        text: "Omar explained everything clearly and the battery has been perfect since.",
+        createdAt: d("2026-09-08"),
+      },
+      {
+        id: "RV-2",
+        requestId: "REQ-2010",
+        customerId: "U-3",
+        freelancerId: "U-6",
+        rating: 4,
+        text: "Good repair, took one day longer than expected.",
+        createdAt: d("2026-07-19"),
+      },
+    ],
+
+    reports: [
+      {
+        id: "RP-204",
+        reporterId: "U-3",
+        targetType: "user",
+        targetId: "U-9",
+        targetLabel: "Majed Al-Otaibi (freelancer profile)",
+        reason: "Suspected fraud or scam",
+        description:
+          "Asked me to pay outside the platform before seeing the device and stopped replying.",
+        evidenceName: "chat-screenshot.png",
+        createdAt: d("2026-10-29T10:00:00"),
+        status: "Open",
+      },
+      {
+        id: "RP-203",
+        reporterId: "U-8",
+        targetType: "request",
+        targetId: "REQ-2043",
+        targetLabel: "REQ-2043 · Charging port works intermittently",
+        reason: "Misleading or fake content",
+        description:
+          "The photos in this request look copied from a website, not the actual device.",
+        createdAt: d("2026-10-31T13:00:00"),
+        status: "Open",
+      },
+      {
+        id: "RP-199",
+        reporterId: "U-2",
+        targetType: "offer",
+        targetId: "OF-3007",
+        targetLabel: "Offer OF-3007 on REQ-2038",
+        reason: "Spam",
+        description:
+          "The offer note contained an external phone number and advertising.",
+        createdAt: d("2026-10-23T09:00:00"),
+        status: "Resolved",
+        decision: "Dismissed — no violation found",
+        decisionNote: "Note was edited before review; no external contact found.",
+        decidedAt: d("2026-10-24T09:00:00"),
+      },
+    ],
+
+    auditLog: [],
+
+    counters: {
+      request: 2043,
+      offer: 3012,
+      report: 204,
+      user: 9,
+      review: 2,
+      category: 6,
+    },
+  };
+}
